@@ -74,7 +74,7 @@ module.exports = "\n/*# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "<!--The content below is only a placeholder and can be replaced.-->\n<div style=\"text-align:center\">\n  <h1>\n    Welcome to {{ title }}!\n  </h1>\n  <img width=\"300\" alt=\"Angular Logo\" src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==\">\n</div>\n<h2>Here are some links to help you start: </h2>\n<ul>\n  <li>\n    <h2><a target=\"_blank\" rel=\"noopener\" href=\"https://angular.io/tutorial\">Tour of Heroes</a></h2>\n  </li>\n  <li>\n    <h2><a target=\"_blank\" rel=\"noopener\" href=\"https://angular.io/cli\">CLI Documentation</a></h2>\n  </li>\n  <li>\n    <h2><a target=\"_blank\" rel=\"noopener\" href=\"https://blog.angular.io/\">Angular blog</a></h2>\n  </li>\n</ul>\n\n<router-outlet></router-outlet>\n"
+module.exports = "<div style=\"text-align:center\">\n  <img src=\"assets/imagem.JPG\" alt=\"some text\" width=300 height=200>\n  <br>\n    <h1> Biografia </h1>\n</div>\n\n<app-informacoes></app-informacoes>\n"
 
 /***/ }),
 
@@ -94,7 +94,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var AppComponent = /** @class */ (function () {
     function AppComponent() {
-        this.title = 'angular-project';
+        this.title = 'about-me';
     }
     AppComponent = tslib__WEBPACK_IMPORTED_MODULE_0__["__decorate"]([
         Object(_angular_core__WEBPACK_IMPORTED_MODULE_1__["Component"])({
@@ -125,6 +125,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _angular_core__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @angular/core */ "./node_modules/@angular/core/fesm5/core.js");
 /* harmony import */ var _app_routing_module__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./app-routing.module */ "./src/app/app-routing.module.ts");
 /* harmony import */ var _app_component__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./app.component */ "./src/app/app.component.ts");
+/* harmony import */ var _informacoes_informacoes_component__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./informacoes/informacoes.component */ "./src/app/informacoes/informacoes.component.ts");
+
 
 
 
@@ -136,7 +138,8 @@ var AppModule = /** @class */ (function () {
     AppModule = tslib__WEBPACK_IMPORTED_MODULE_0__["__decorate"]([
         Object(_angular_core__WEBPACK_IMPORTED_MODULE_2__["NgModule"])({
             declarations: [
-                _app_component__WEBPACK_IMPORTED_MODULE_4__["AppComponent"]
+                _app_component__WEBPACK_IMPORTED_MODULE_4__["AppComponent"],
+                _informacoes_informacoes_component__WEBPACK_IMPORTED_MODULE_5__["InformacoesComponent"]
             ],
             imports: [
                 _angular_platform_browser__WEBPACK_IMPORTED_MODULE_1__["BrowserModule"],
@@ -147,6 +150,89 @@ var AppModule = /** @class */ (function () {
         })
     ], AppModule);
     return AppModule;
+}());
+
+
+
+/***/ }),
+
+/***/ "./src/app/informacoes/informacoes.component.css":
+/*!*******************************************************!*\
+  !*** ./src/app/informacoes/informacoes.component.css ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "\n/*# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiIsImZpbGUiOiJzcmMvYXBwL2luZm9ybWFjb2VzL2luZm9ybWFjb2VzLmNvbXBvbmVudC5jc3MifQ== */"
+
+/***/ }),
+
+/***/ "./src/app/informacoes/informacoes.component.html":
+/*!********************************************************!*\
+  !*** ./src/app/informacoes/informacoes.component.html ***!
+  \********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "<body>\n    {{biografia}}\n  <h2> Dados Pessoais </h2>\n  <ul>  \n    <li>Nome: {{informacoesPessoais.nome}}</li>\n    <li>Sexo: {{informacoesPessoais.sexo}}</li>\n    <li>Email: {{informacoesPessoais.email}}</li>\n    <li>Profissão: {{informacoesPessoais.profissao}}</li>\n    <li>Estado Civil: {{informacoesPessoais.estadoCivil}}</li>\n    <li>Cidade: {{informacoesPessoais.cidade}}</li>\n    <li>Estado: {{informacoesPessoais.estado}}</li>\n  </ul>\n</body>\n\n<body>\n  <h2> Informações Acadêmicas </h2>\n  <ul>  \n    <li>Universidade: {{informacoesAcademicas.universidade}}</li>\n    <li>Curso: {{informacoesAcademicas.curso}}</li>\n  </ul>\n<table>\n  <tbody>\n    <th> Disciplinas do 1º Período </th>\n    <tr *ngFor = \"let disc of primeiro\">\n      <td> <li>{{disc.nome}}</li> </td>\n    </tr>\n    <th> Disciplinas do 2º Período </th>\n    <tr *ngFor = \"let disc of segundo\">\n      <td> <li>{{disc.nome}}</li> </td>\n    </tr>\n    <th> Disciplinas do 3º Período </th>\n    <tr *ngFor = \"let disc of terceiro\">\n      <td> <li>{{disc.nome}}</li> </td>\n    </tr>\n    <th> Disciplinas do 4º Período </th>\n    <tr *ngFor = \"let disc of quarto\">\n      <td> <li>{{disc.nome}}</li> </td>\n    </tr>\n    <th> Disciplinas do 5º Período </th>\n    <tr *ngFor = \"let disc of quinto\">\n      <td> <li>{{disc.nome}}</li> </td>\n    </tr>\n  </tbody>\n </table>\n\n"
+
+/***/ }),
+
+/***/ "./src/app/informacoes/informacoes.component.ts":
+/*!******************************************************!*\
+  !*** ./src/app/informacoes/informacoes.component.ts ***!
+  \******************************************************/
+/*! exports provided: InformacoesComponent */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "InformacoesComponent", function() { return InformacoesComponent; });
+/* harmony import */ var tslib__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! tslib */ "./node_modules/tslib/tslib.es6.js");
+/* harmony import */ var _angular_core__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @angular/core */ "./node_modules/@angular/core/fesm5/core.js");
+
+
+var InformacoesComponent = /** @class */ (function () {
+    function InformacoesComponent() {
+        this.informacoesPessoais = { nome: 'Jorge Wilson Cunha da Silva', sexo: 'Masculino', email: 'jorgewilsc@gmail.com',
+            profissao: 'Estudante', estadoCivil: 'Solteiro', cidade: 'Palmas', estado: 'Tocantins' };
+        this.informacoesAcademicas = { universidade: 'Centro Universitário Luterano de Palmas', curso: 'Engenharia de Software' };
+        this.primeiro = [{ nome: 'Algoritmos e Programação I' },
+            { nome: 'Fundamentos de Matemática' },
+            { nome: 'Introdução a Computação' }];
+        this.segundo = [{ nome: 'Algoritmos e Programação II' },
+            { nome: 'Comunicação e Expressão' },
+            { nome: 'Cultura Religiosa' },
+            { nome: 'Logica de Predicados' }];
+        this.terceiro = [{ nome: 'Banco de Dados I' },
+            { nome: 'Engenharia de Software I' },
+            { nome: 'Estrutura de Dados I' },
+            { nome: 'Linguagem de Programação Orientada a Objetos I' }];
+        this.quarto = [{ nome: 'Arquitetura e Organização de Computadores I' },
+            { nome: 'Banco de Dados II' },
+            { nome: 'Engenharia de Software II' },
+            { nome: 'Linguagem de Programação Comercial I' },
+            { nome: 'Sistemas de Informação I' },
+            { nome: 'Sociedade e Contemporaneidade' }];
+        this.quinto = [{ nome: 'Linguagem de Programação para a WEB' },
+            { nome: 'Testes de Software' },
+            { nome: 'Instrumentalização Cientifica' },
+            { nome: 'Fundamentos de Sistemas de Informação' },
+            { nome: 'Engenharia de Software II' }];
+        this.informacoesProfissionais = 'Estudante';
+        this.biografia = 'Nasci no dia vinte e sete de setembro de mil novecentos e noventa e nove em Barra do Corda-MA, onde vivi durante dezesseis anos com minha mãe (Maria de Lourdes de Sousa Cunha) e meu pai (Antonio Edmilson da Silva). Após o termino do ensino médio, decidi ingressar no curso de Ciência da Computação na ULBRA, mas por não ter afinidade com matérias de calculo, tomei a decisão de trocar de curso, e atualmente estou cursando o quinto periodo de Engenharia de Software.';
+    }
+    InformacoesComponent.prototype.ngOnInit = function () {
+    };
+    InformacoesComponent = tslib__WEBPACK_IMPORTED_MODULE_0__["__decorate"]([
+        Object(_angular_core__WEBPACK_IMPORTED_MODULE_1__["Component"])({
+            selector: 'app-informacoes',
+            template: __webpack_require__(/*! ./informacoes.component.html */ "./src/app/informacoes/informacoes.component.html"),
+            styles: [__webpack_require__(/*! ./informacoes.component.css */ "./src/app/informacoes/informacoes.component.css")]
+        }),
+        tslib__WEBPACK_IMPORTED_MODULE_0__["__metadata"]("design:paramtypes", [])
+    ], InformacoesComponent);
+    return InformacoesComponent;
 }());
 
 
@@ -214,7 +300,7 @@ Object(_angular_platform_browser_dynamic__WEBPACK_IMPORTED_MODULE_1__["platformB
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(/*! C:\Users\123255510\angular-project\src\main.ts */"./src/main.ts");
+module.exports = __webpack_require__(/*! C:\Users\Jorge Wilson\about-me\src\main.ts */"./src/main.ts");
 
 
 /***/ })

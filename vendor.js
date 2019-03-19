@@ -104,7 +104,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _angular_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @angular/core */ "./node_modules/@angular/core/fesm5/core.js");
 /* harmony import */ var tslib__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! tslib */ "./node_modules/tslib/tslib.es6.js");
 /**
- * @license Angular v7.2.5
+ * @license Angular v7.2.9
  * (c) 2010-2019 Google LLC. https://angular.io/
  * License: MIT
  */
@@ -5891,7 +5891,7 @@ function isPlatformWorkerUi(platformId) {
 /**
  * @publicApi
  */
-var VERSION = new _angular_core__WEBPACK_IMPORTED_MODULE_0__["Version"]('7.2.5');
+var VERSION = new _angular_core__WEBPACK_IMPORTED_MODULE_0__["Version"]('7.2.9');
 
 /**
  * @license
@@ -6356,7 +6356,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "R3BoundTarget", function() { return R3BoundTarget; });
 /* harmony import */ var tslib__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! tslib */ "./node_modules/tslib/tslib.es6.js");
 /**
- * @license Angular v7.2.5
+ * @license Angular v7.2.9
  * (c) 2010-2019 Google LLC. https://angular.io/
  * License: MIT
  */
@@ -7217,14 +7217,18 @@ var MissingTranslationStrategy;
     MissingTranslationStrategy[MissingTranslationStrategy["Ignore"] = 2] = "Ignore";
 })(MissingTranslationStrategy || (MissingTranslationStrategy = {}));
 function makeMetadataFactory(name, props) {
-    var factory = function () {
+    // This must be declared as a function, not a fat arrow, so that ES2015 devmode produces code
+    // that works with the static_reflector.ts in the ViewEngine compiler.
+    // In particular, `_registerDecoratorOrConstructor` assumes that the value returned here can be
+    // new'ed.
+    function factory() {
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
         var values = props ? props.apply(void 0, Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__spread"])(args)) : {};
         return Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__assign"])({ ngMetadataName: name }, values);
-    };
+    }
     factory.isTypeOf = function (obj) { return obj && obj.ngMetadataName === name; };
     factory.ngMetadataName = name;
     return factory;
@@ -16753,11 +16757,9 @@ var TokenizeResult = /** @class */ (function () {
     }
     return TokenizeResult;
 }());
-function tokenize(source, url, getTagDefinition, tokenizeExpansionForms, interpolationConfig) {
-    if (tokenizeExpansionForms === void 0) { tokenizeExpansionForms = false; }
-    if (interpolationConfig === void 0) { interpolationConfig = DEFAULT_INTERPOLATION_CONFIG; }
-    return new _Tokenizer(new ParseSourceFile(source, url), getTagDefinition, tokenizeExpansionForms, interpolationConfig)
-        .tokenize();
+function tokenize(source, url, getTagDefinition, options) {
+    if (options === void 0) { options = {}; }
+    return new _Tokenizer(new ParseSourceFile(source, url), getTagDefinition, options).tokenize();
 }
 var _CR_OR_CRLF_REGEXP = /\r\n?/g;
 function _unexpectedCharacterErrorMsg(charCode) {
@@ -16781,22 +16783,22 @@ var _Tokenizer = /** @class */ (function () {
      * @param _tokenizeIcu Whether to tokenize ICU messages (considered as text nodes when false)
      * @param _interpolationConfig
      */
-    function _Tokenizer(_file, _getTagDefinition, _tokenizeIcu, _interpolationConfig) {
-        if (_interpolationConfig === void 0) { _interpolationConfig = DEFAULT_INTERPOLATION_CONFIG; }
+    function _Tokenizer(_file, _getTagDefinition, options) {
         this._file = _file;
         this._getTagDefinition = _getTagDefinition;
-        this._tokenizeIcu = _tokenizeIcu;
-        this._interpolationConfig = _interpolationConfig;
-        // Note: this is always lowercase!
         this._peek = -1;
         this._nextPeek = -1;
         this._index = -1;
         this._line = 0;
         this._column = -1;
+        this._currentTokenStart = null;
+        this._currentTokenType = null;
         this._expansionCaseStack = [];
         this._inInterpolation = false;
         this.tokens = [];
         this.errors = [];
+        this._tokenizeIcu = options.tokenizeExpansionForms || false;
+        this._interpolationConfig = options.interpolationConfig || DEFAULT_INTERPOLATION_CONFIG;
         this._input = _file.content;
         this._length = _file.content.length;
         this._advance();
@@ -16888,6 +16890,12 @@ var _Tokenizer = /** @class */ (function () {
     };
     _Tokenizer.prototype._endToken = function (parts, end) {
         if (end === void 0) { end = this._getLocation(); }
+        if (this._currentTokenStart === null) {
+            throw new TokenError('Programming error - attempted to end a token when there was no start to the token', this._currentTokenType, this._getSpan(end, end));
+        }
+        if (this._currentTokenType === null) {
+            throw new TokenError('Programming error - attempted to end a token which has no token type', null, this._getSpan(this._currentTokenStart, end));
+        }
         var token = new Token$1(this._currentTokenType, parts, new ParseSourceSpan(this._currentTokenStart, end));
         this.tokens.push(token);
         this._currentTokenStart = null;
@@ -17381,10 +17389,8 @@ var Parser$1 = /** @class */ (function () {
     function Parser(getTagDefinition) {
         this.getTagDefinition = getTagDefinition;
     }
-    Parser.prototype.parse = function (source, url, parseExpansionForms, interpolationConfig) {
-        if (parseExpansionForms === void 0) { parseExpansionForms = false; }
-        if (interpolationConfig === void 0) { interpolationConfig = DEFAULT_INTERPOLATION_CONFIG; }
-        var tokensAndErrors = tokenize(source, url, this.getTagDefinition, parseExpansionForms, interpolationConfig);
+    Parser.prototype.parse = function (source, url, options) {
+        var tokensAndErrors = tokenize(source, url, this.getTagDefinition, options);
         var treeAndErrors = new _TreeBuilder(tokensAndErrors.tokens, this.getTagDefinition).build();
         return new ParseTreeResult(treeAndErrors.rootNodes, tokensAndErrors.errors.concat(treeAndErrors.errors));
     };
@@ -17718,10 +17724,8 @@ var HtmlParser = /** @class */ (function (_super) {
     function HtmlParser() {
         return _super.call(this, getHtmlTagDefinition) || this;
     }
-    HtmlParser.prototype.parse = function (source, url, parseExpansionForms, interpolationConfig) {
-        if (parseExpansionForms === void 0) { parseExpansionForms = false; }
-        if (interpolationConfig === void 0) { interpolationConfig = DEFAULT_INTERPOLATION_CONFIG; }
-        return _super.prototype.parse.call(this, source, url, parseExpansionForms, interpolationConfig);
+    HtmlParser.prototype.parse = function (source, url, options) {
+        return _super.prototype.parse.call(this, source, url, options);
     };
     return HtmlParser;
 }(Parser$1));
@@ -21136,13 +21140,14 @@ function interpolate(args) {
  *
  * @param template text of the template to parse
  * @param templateUrl URL to use for source mapping of the parsed template
+ * @param options options to modify how the template is parsed
  */
 function parseTemplate(template, templateUrl, options) {
     if (options === void 0) { options = {}; }
     var interpolationConfig = options.interpolationConfig, preserveWhitespaces = options.preserveWhitespaces;
     var bindingParser = makeBindingParser(interpolationConfig);
     var htmlParser = new HtmlParser();
-    var parseResult = htmlParser.parse(template, templateUrl, true, interpolationConfig);
+    var parseResult = htmlParser.parse(template, templateUrl, Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__assign"])({}, options, { tokenizeExpansionForms: true }));
     if (parseResult.errors && parseResult.errors.length > 0) {
         return { errors: parseResult.errors, nodes: [] };
     }
@@ -21977,7 +21982,7 @@ var CompilerFacadeImpl = /** @class */ (function () {
             InterpolationConfig.fromArray(facade.interpolation) :
             DEFAULT_INTERPOLATION_CONFIG;
         // Parse the template and check for errors.
-        var template = parseTemplate(facade.template, sourceMapUrl, { preserveWhitespaces: facade.preserveWhitespaces || false, interpolationConfig: interpolationConfig });
+        var template = parseTemplate(facade.template, sourceMapUrl, { preserveWhitespaces: facade.preserveWhitespaces, interpolationConfig: interpolationConfig });
         if (template.errors !== undefined) {
             var errors = template.errors.map(function (err) { return err.toString(); }).join(', ');
             throw new Error("Errors during JIT compilation of template for " + facade.name + ": " + errors);
@@ -22118,7 +22123,7 @@ function publishFacade(global) {
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-var VERSION$1 = new Version('7.2.5');
+var VERSION$1 = new Version('7.2.9');
 
 /**
  * @license
@@ -22568,7 +22573,8 @@ var DirectiveNormalizer = /** @class */ (function () {
     DirectiveNormalizer.prototype._preparseLoadedTemplate = function (prenormData, template, templateAbsUrl) {
         var isInline = !!prenormData.template;
         var interpolationConfig = InterpolationConfig.fromArray(prenormData.interpolation);
-        var rootNodesAndErrors = this._htmlParser.parse(template, templateSourceUrl({ reference: prenormData.ngModuleType }, { type: { reference: prenormData.componentType } }, { isInline: isInline, templateUrl: templateAbsUrl }), true, interpolationConfig);
+        var templateUrl = templateSourceUrl({ reference: prenormData.ngModuleType }, { type: { reference: prenormData.componentType } }, { isInline: isInline, templateUrl: templateAbsUrl });
+        var rootNodesAndErrors = this._htmlParser.parse(template, templateUrl, { tokenizeExpansionForms: true, interpolationConfig: interpolationConfig });
         if (rootNodesAndErrors.errors.length > 0) {
             var errorString = rootNodesAndErrors.errors.join('\n');
             throw syntaxError("Template parse errors:\n" + errorString);
@@ -23341,9 +23347,8 @@ var XmlParser = /** @class */ (function (_super) {
     function XmlParser() {
         return _super.call(this, getXmlTagDefinition) || this;
     }
-    XmlParser.prototype.parse = function (source, url, parseExpansionForms) {
-        if (parseExpansionForms === void 0) { parseExpansionForms = false; }
-        return _super.prototype.parse.call(this, source, url, parseExpansionForms);
+    XmlParser.prototype.parse = function (source, url, options) {
+        return _super.prototype.parse.call(this, source, url, options);
     };
     return XmlParser;
 }(Parser$1));
@@ -23479,7 +23484,7 @@ var XliffParser = /** @class */ (function () {
     XliffParser.prototype.parse = function (xliff, url) {
         this._unitMlString = null;
         this._msgIdToHtml = {};
-        var xml = new XmlParser().parse(xliff, url, false);
+        var xml = new XmlParser().parse(xliff, url);
         this._errors = xml.errors;
         visitAll(this, xml.rootNodes, null);
         return {
@@ -23551,7 +23556,7 @@ var XmlToI18n = /** @class */ (function () {
     function XmlToI18n() {
     }
     XmlToI18n.prototype.convert = function (message, url) {
-        var xmlIcu = new XmlParser().parse(message, url, true);
+        var xmlIcu = new XmlParser().parse(message, url, { tokenizeExpansionForms: true });
         this._errors = xmlIcu.errors;
         var i18nNodes = this._errors.length > 0 || xmlIcu.rootNodes.length == 0 ?
             [] : [].concat.apply([], Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__spread"])(visitAll(this, xmlIcu.rootNodes)));
@@ -23759,7 +23764,7 @@ var Xliff2Parser = /** @class */ (function () {
     Xliff2Parser.prototype.parse = function (xliff, url) {
         this._unitMlString = null;
         this._msgIdToHtml = {};
-        var xml = new XmlParser().parse(xliff, url, false);
+        var xml = new XmlParser().parse(xliff, url);
         this._errors = xml.errors;
         visitAll(this, xml.rootNodes, null);
         return {
@@ -23837,7 +23842,7 @@ var XmlToI18n$1 = /** @class */ (function () {
     function XmlToI18n() {
     }
     XmlToI18n.prototype.convert = function (message, url) {
-        var xmlIcu = new XmlParser().parse(message, url, true);
+        var xmlIcu = new XmlParser().parse(message, url, { tokenizeExpansionForms: true });
         this._errors = xmlIcu.errors;
         var i18nNodes = this._errors.length > 0 || xmlIcu.rootNodes.length == 0 ?
             [] : [].concat.apply([], Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__spread"])(visitAll(this, xmlIcu.rootNodes)));
@@ -23985,7 +23990,7 @@ var XtbParser = /** @class */ (function () {
         this._msgIdToHtml = {};
         // We can not parse the ICU messages at this point as some messages might not originate
         // from Angular that could not be lex'd.
-        var xml = new XmlParser().parse(xtb, url, false);
+        var xml = new XmlParser().parse(xtb, url);
         this._errors = xml.errors;
         visitAll(this, xml.rootNodes);
         return {
@@ -24046,7 +24051,7 @@ var XmlToI18n$2 = /** @class */ (function () {
     function XmlToI18n() {
     }
     XmlToI18n.prototype.convert = function (message, url) {
-        var xmlIcu = new XmlParser().parse(message, url, true);
+        var xmlIcu = new XmlParser().parse(message, url, { tokenizeExpansionForms: true });
         this._errors = xmlIcu.errors;
         var i18nNodes = this._errors.length > 0 || xmlIcu.rootNodes.length == 0 ?
             [] :
@@ -24147,7 +24152,7 @@ var I18nToHtmlVisitor = /** @class */ (function () {
         var text = this._convertToText(srcMsg);
         // text to html
         var url = srcMsg.nodes[0].sourceSpan.start.file.url;
-        var html = new HtmlParser().parse(text, url, true);
+        var html = new HtmlParser().parse(text, url, { tokenizeExpansionForms: true });
         return {
             nodes: html.rootNodes,
             errors: Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__spread"])(this._errors, html.errors),
@@ -24272,10 +24277,10 @@ var I18NHtmlParser = /** @class */ (function () {
                 new TranslationBundle({}, null, digest, undefined, missingTranslation, console);
         }
     }
-    I18NHtmlParser.prototype.parse = function (source, url, parseExpansionForms, interpolationConfig) {
-        if (parseExpansionForms === void 0) { parseExpansionForms = false; }
-        if (interpolationConfig === void 0) { interpolationConfig = DEFAULT_INTERPOLATION_CONFIG; }
-        var parseResult = this._htmlParser.parse(source, url, parseExpansionForms, interpolationConfig);
+    I18NHtmlParser.prototype.parse = function (source, url, options) {
+        if (options === void 0) { options = {}; }
+        var interpolationConfig = options.interpolationConfig || DEFAULT_INTERPOLATION_CONFIG;
+        var parseResult = this._htmlParser.parse(source, url, Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__assign"])({ interpolationConfig: interpolationConfig }, options));
         if (parseResult.errors.length) {
             return new ParseTreeResult(parseResult.rootNodes, parseResult.errors);
         }
@@ -26960,7 +26965,10 @@ var TemplateParser = /** @class */ (function () {
     };
     TemplateParser.prototype.tryParse = function (component, template, directives, pipes, schemas, templateUrl, preserveWhitespaces) {
         var htmlParseResult = typeof template === 'string' ?
-            this._htmlParser.parse(template, templateUrl, true, this.getInterpolationConfig(component)) :
+            this._htmlParser.parse(template, templateUrl, {
+                tokenizeExpansionForms: true,
+                interpolationConfig: this.getInterpolationConfig(component)
+            }) :
             template;
         if (!preserveWhitespaces) {
             htmlParseResult = removeWhitespaces(htmlParseResult);
@@ -28802,7 +28810,7 @@ var MessageBundle = /** @class */ (function () {
     }
     MessageBundle.prototype.updateFromTemplate = function (html, url, interpolationConfig) {
         var _a;
-        var htmlParserResult = this._htmlParser.parse(html, url, true, interpolationConfig);
+        var htmlParserResult = this._htmlParser.parse(html, url, { tokenizeExpansionForms: true, interpolationConfig: interpolationConfig });
         if (htmlParserResult.errors.length) {
             return htmlParserResult.errors;
         }
@@ -29388,16 +29396,16 @@ var StaticSymbolResolver = /** @class */ (function () {
                             return {
                                 __symbolic: 'error',
                                 message: "Could not resolve " + module + " relative to " + self.host.getMetadataFor(sourceSymbol.filePath) + ".",
-                                line: map.line,
-                                character: map.character,
+                                line: map['line'],
+                                character: map['character'],
                                 fileName: getOriginalName()
                             };
                         }
                         return {
                             __symbolic: 'resolved',
                             symbol: self.getStaticSymbol(filePath, name_1),
-                            line: map.line,
-                            character: map.character,
+                            line: map['line'],
+                            character: map['character'],
                             fileName: getOriginalName()
                         };
                     }
@@ -29718,7 +29726,7 @@ var ToJsonSerializer = /** @class */ (function (_super) {
      */
     ToJsonSerializer.prototype.visitStringMap = function (map, context) {
         if (map['__symbolic'] === 'resolved') {
-            return visitValue(map.symbol, this, context);
+            return visitValue(map['symbol'], this, context);
         }
         if (map['__symbolic'] === 'error') {
             delete map['line'];
@@ -33475,46 +33483,47 @@ publishFacade(_global);
 /*!**************************************************!*\
   !*** ./node_modules/@angular/core/fesm5/core.js ***!
   \**************************************************/
-/*! exports provided: ɵangular_packages_core_core_s, ɵangular_packages_core_core_p, ɵangular_packages_core_core_q, ɵangular_packages_core_core_r, ɵangular_packages_core_core_g, ɵangular_packages_core_core_n, ɵangular_packages_core_core_o, ɵangular_packages_core_core_m, ɵangular_packages_core_core_l, ɵangular_packages_core_core_c, ɵangular_packages_core_core_d, ɵangular_packages_core_core_e, ɵangular_packages_core_core_f, ɵangular_packages_core_core_k, ɵangular_packages_core_core_t, ɵangular_packages_core_core_v, ɵangular_packages_core_core_u, ɵangular_packages_core_core_y, ɵangular_packages_core_core_w, ɵangular_packages_core_core_x, ɵangular_packages_core_core_bb, ɵangular_packages_core_core_bi, ɵangular_packages_core_core_bc, ɵangular_packages_core_core_bd, ɵangular_packages_core_core_be, ɵangular_packages_core_core_bh, ɵangular_packages_core_core_bl, ɵangular_packages_core_core_h, ɵangular_packages_core_core_i, ɵangular_packages_core_core_j, ɵangular_packages_core_core_a, ɵangular_packages_core_core_b, ɵangular_packages_core_core_bj, ɵangular_packages_core_core_z, ɵangular_packages_core_core_ba, createPlatform, assertPlatform, destroyPlatform, getPlatform, PlatformRef, ApplicationRef, createPlatformFactory, NgProbeToken, enableProdMode, isDevMode, APP_ID, PACKAGE_ROOT_URL, PLATFORM_INITIALIZER, PLATFORM_ID, APP_BOOTSTRAP_LISTENER, APP_INITIALIZER, ApplicationInitStatus, DebugElement, DebugNode, asNativeElements, getDebugNode, Testability, TestabilityRegistry, setTestabilityGetter, TRANSLATIONS, TRANSLATIONS_FORMAT, LOCALE_ID, MissingTranslationStrategy, ApplicationModule, wtfCreateScope, wtfLeave, wtfStartTimeRange, wtfEndTimeRange, Type, EventEmitter, ErrorHandler, Sanitizer, SecurityContext, ANALYZE_FOR_ENTRY_COMPONENTS, Attribute, ContentChild, ContentChildren, Query, ViewChild, ViewChildren, Component, Directive, HostBinding, HostListener, Input, Output, Pipe, CUSTOM_ELEMENTS_SCHEMA, NO_ERRORS_SCHEMA, NgModule, ViewEncapsulation, Version, VERSION, defineInjectable, defineInjector, forwardRef, resolveForwardRef, Injectable, INJECTOR, Injector, inject, ɵinject, InjectFlags, ReflectiveInjector, createInjector, ResolvedReflectiveFactory, ReflectiveKey, InjectionToken, Inject, Optional, Self, SkipSelf, Host, NgZone, ɵNoopNgZone, RenderComponentType, Renderer, Renderer2, RendererFactory2, RendererStyleFlags2, RootRenderer, COMPILER_OPTIONS, Compiler, CompilerFactory, ModuleWithComponentFactories, ComponentFactory, ɵComponentFactory, ComponentRef, ComponentFactoryResolver, ElementRef, NgModuleFactory, NgModuleRef, NgModuleFactoryLoader, getModuleFactory, QueryList, SystemJsNgModuleLoader, SystemJsNgModuleLoaderConfig, TemplateRef, ViewContainerRef, EmbeddedViewRef, ViewRef, ChangeDetectionStrategy, ChangeDetectorRef, DefaultIterableDiffer, IterableDiffers, KeyValueDiffers, SimpleChange, WrappedValue, platformCore, ɵALLOW_MULTIPLE_PLATFORMS, ɵAPP_ID_RANDOM_PROVIDER, ɵdefaultIterableDiffers, ɵdefaultKeyValueDiffers, ɵdevModeEqual, ɵisListLikeIterable, ɵChangeDetectorStatus, ɵisDefaultChangeDetectionStrategy, ɵConsole, ɵgetInjectableDef, ɵsetCurrentInjector, ɵAPP_ROOT, ɵivyEnabled, ɵCodegenComponentFactoryResolver, ɵresolveComponentResources, ɵReflectionCapabilities, ɵRenderDebugInfo, ɵ_sanitizeHtml, ɵ_sanitizeStyle, ɵ_sanitizeUrl, ɵglobal, ɵlooseIdentical, ɵstringify, ɵmakeDecorator, ɵisObservable, ɵisPromise, ɵclearOverrides, ɵinitServicesIfNeeded, ɵoverrideComponentView, ɵoverrideProvider, ɵNOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR, ɵdefineBase, ɵdefineComponent, ɵdefineDirective, ɵdefinePipe, ɵdefineNgModule, ɵdetectChanges, ɵrenderComponent, ɵRender3ComponentFactory, ɵRender3ComponentRef, ɵdirectiveInject, ɵinjectAttribute, ɵgetFactoryOf, ɵgetInheritedFactory, ɵtemplateRefExtractor, ɵProvidersFeature, ɵInheritDefinitionFeature, ɵNgOnChangesFeature, ɵLifecycleHooksFeature, ɵRender3NgModuleRef, ɵmarkDirty, ɵNgModuleFactory, ɵNO_CHANGE, ɵcontainer, ɵnextContext, ɵelementStart, ɵnamespaceHTML, ɵnamespaceMathML, ɵnamespaceSVG, ɵelement, ɵlistener, ɵtext, ɵembeddedViewStart, ɵquery, ɵregisterContentQuery, ɵprojection, ɵbind, ɵinterpolation1, ɵinterpolation2, ɵinterpolation3, ɵinterpolation4, ɵinterpolation5, ɵinterpolation6, ɵinterpolation7, ɵinterpolation8, ɵinterpolationV, ɵpipeBind1, ɵpipeBind2, ɵpipeBind3, ɵpipeBind4, ɵpipeBindV, ɵpureFunction0, ɵpureFunction1, ɵpureFunction2, ɵpureFunction3, ɵpureFunction4, ɵpureFunction5, ɵpureFunction6, ɵpureFunction7, ɵpureFunction8, ɵpureFunctionV, ɵgetCurrentView, ɵgetHostElement, ɵrestoreView, ɵcontainerRefreshStart, ɵcontainerRefreshEnd, ɵqueryRefresh, ɵloadQueryList, ɵelementEnd, ɵelementProperty, ɵcomponentHostSyntheticProperty, ɵprojectionDef, ɵreference, ɵenableBindings, ɵdisableBindings, ɵallocHostVars, ɵelementAttribute, ɵelementContainerStart, ɵelementContainerEnd, ɵelementStyling, ɵelementHostAttrs, ɵelementStylingMap, ɵelementStyleProp, ɵelementStylingApply, ɵelementClassProp, ɵtextBinding, ɵtemplate, ɵembeddedViewEnd, ɵstore, ɵload, ɵpipe, ɵwhenRendered, ɵi18n, ɵi18nAttributes, ɵi18nExp, ɵi18nStart, ɵi18nEnd, ɵi18nApply, ɵi18nPostprocess, ɵsetClassMetadata, ɵcompileComponent, ɵcompileDirective, ɵcompileNgModule, ɵcompileNgModuleDefs, ɵpatchComponentDefWithScope, ɵresetCompiledComponents, ɵcompilePipe, ɵsanitizeHtml, ɵsanitizeStyle, ɵdefaultStyleSanitizer, ɵsanitizeScript, ɵsanitizeUrl, ɵsanitizeResourceUrl, ɵbypassSanitizationTrustHtml, ɵbypassSanitizationTrustStyle, ɵbypassSanitizationTrustScript, ɵbypassSanitizationTrustUrl, ɵbypassSanitizationTrustResourceUrl, ɵgetLContext, ɵbindPlayerFactory, ɵaddPlayer, ɵgetPlayers, ɵcompileNgModuleFactory__POST_R3__, ɵSWITCH_COMPILE_COMPONENT__POST_R3__, ɵSWITCH_COMPILE_DIRECTIVE__POST_R3__, ɵSWITCH_COMPILE_PIPE__POST_R3__, ɵSWITCH_COMPILE_NGMODULE__POST_R3__, ɵgetDebugNode__POST_R3__, ɵSWITCH_COMPILE_INJECTABLE__POST_R3__, ɵSWITCH_IVY_ENABLED__POST_R3__, ɵSWITCH_CHANGE_DETECTOR_REF_FACTORY__POST_R3__, ɵCompiler_compileModuleSync__POST_R3__, ɵCompiler_compileModuleAsync__POST_R3__, ɵCompiler_compileModuleAndAllComponentsSync__POST_R3__, ɵCompiler_compileModuleAndAllComponentsAsync__POST_R3__, ɵSWITCH_ELEMENT_REF_FACTORY__POST_R3__, ɵSWITCH_TEMPLATE_REF_FACTORY__POST_R3__, ɵSWITCH_VIEW_CONTAINER_REF_FACTORY__POST_R3__, ɵSWITCH_RENDERER2_FACTORY__POST_R3__, ɵgetModuleFactory__POST_R3__, ɵpublishGlobalUtil, ɵpublishDefaultGlobalUtils, ɵSWITCH_INJECTOR_FACTORY__POST_R3__, ɵregisterModuleFactory, ɵEMPTY_ARRAY, ɵEMPTY_MAP, ɵand, ɵccf, ɵcmf, ɵcrt, ɵdid, ɵeld, ɵelementEventFullName, ɵgetComponentViewDefinitionFactory, ɵinlineInterpolate, ɵinterpolate, ɵmod, ɵmpd, ɵncd, ɵnov, ɵpid, ɵprd, ɵpad, ɵpod, ɵppd, ɵqud, ɵted, ɵunv, ɵvid */
+/*! exports provided: ɵangular_packages_core_core_t, ɵangular_packages_core_core_q, ɵangular_packages_core_core_r, ɵangular_packages_core_core_s, ɵangular_packages_core_core_h, ɵangular_packages_core_core_o, ɵangular_packages_core_core_p, ɵangular_packages_core_core_n, ɵangular_packages_core_core_m, ɵangular_packages_core_core_c, ɵangular_packages_core_core_d, ɵangular_packages_core_core_e, ɵangular_packages_core_core_f, ɵangular_packages_core_core_g, ɵangular_packages_core_core_l, ɵangular_packages_core_core_u, ɵangular_packages_core_core_w, ɵangular_packages_core_core_v, ɵangular_packages_core_core_z, ɵangular_packages_core_core_x, ɵangular_packages_core_core_y, ɵangular_packages_core_core_bc, ɵangular_packages_core_core_bj, ɵangular_packages_core_core_bd, ɵangular_packages_core_core_be, ɵangular_packages_core_core_bf, ɵangular_packages_core_core_bi, ɵangular_packages_core_core_bm, ɵangular_packages_core_core_i, ɵangular_packages_core_core_j, ɵangular_packages_core_core_k, ɵangular_packages_core_core_a, ɵangular_packages_core_core_b, ɵangular_packages_core_core_bk, ɵangular_packages_core_core_ba, ɵangular_packages_core_core_bb, createPlatform, assertPlatform, destroyPlatform, getPlatform, PlatformRef, ApplicationRef, createPlatformFactory, NgProbeToken, enableProdMode, isDevMode, APP_ID, PACKAGE_ROOT_URL, PLATFORM_INITIALIZER, PLATFORM_ID, APP_BOOTSTRAP_LISTENER, APP_INITIALIZER, ApplicationInitStatus, DebugElement, DebugNode, asNativeElements, getDebugNode, Testability, TestabilityRegistry, setTestabilityGetter, TRANSLATIONS, TRANSLATIONS_FORMAT, LOCALE_ID, MissingTranslationStrategy, ApplicationModule, wtfCreateScope, wtfLeave, wtfStartTimeRange, wtfEndTimeRange, Type, EventEmitter, ErrorHandler, Sanitizer, SecurityContext, ANALYZE_FOR_ENTRY_COMPONENTS, Attribute, ContentChild, ContentChildren, Query, ViewChild, ViewChildren, Component, Directive, HostBinding, HostListener, Input, Output, Pipe, CUSTOM_ELEMENTS_SCHEMA, NO_ERRORS_SCHEMA, NgModule, ViewEncapsulation, Version, VERSION, defineInjectable, defineInjector, forwardRef, resolveForwardRef, Injectable, INJECTOR, Injector, inject, ɵinject, InjectFlags, ReflectiveInjector, createInjector, ResolvedReflectiveFactory, ReflectiveKey, InjectionToken, Inject, Optional, Self, SkipSelf, Host, NgZone, ɵNoopNgZone, RenderComponentType, Renderer, Renderer2, RendererFactory2, RendererStyleFlags2, RootRenderer, COMPILER_OPTIONS, Compiler, CompilerFactory, ModuleWithComponentFactories, ComponentFactory, ɵComponentFactory, ComponentRef, ComponentFactoryResolver, ElementRef, NgModuleFactory, NgModuleRef, NgModuleFactoryLoader, getModuleFactory, QueryList, SystemJsNgModuleLoader, SystemJsNgModuleLoaderConfig, TemplateRef, ViewContainerRef, EmbeddedViewRef, ViewRef, ChangeDetectionStrategy, ChangeDetectorRef, DefaultIterableDiffer, IterableDiffers, KeyValueDiffers, SimpleChange, WrappedValue, platformCore, ɵALLOW_MULTIPLE_PLATFORMS, ɵAPP_ID_RANDOM_PROVIDER, ɵdefaultIterableDiffers, ɵdefaultKeyValueDiffers, ɵdevModeEqual, ɵisListLikeIterable, ɵChangeDetectorStatus, ɵisDefaultChangeDetectionStrategy, ɵConsole, ɵgetInjectableDef, ɵsetCurrentInjector, ɵAPP_ROOT, ɵivyEnabled, ɵCodegenComponentFactoryResolver, ɵresolveComponentResources, ɵReflectionCapabilities, ɵRenderDebugInfo, ɵ_sanitizeHtml, ɵ_sanitizeStyle, ɵ_sanitizeUrl, ɵglobal, ɵlooseIdentical, ɵstringify, ɵmakeDecorator, ɵisObservable, ɵisPromise, ɵclearOverrides, ɵinitServicesIfNeeded, ɵoverrideComponentView, ɵoverrideProvider, ɵNOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR, ɵdefineBase, ɵdefineComponent, ɵdefineDirective, ɵdefinePipe, ɵdefineNgModule, ɵdetectChanges, ɵrenderComponent, ɵRender3ComponentFactory, ɵRender3ComponentRef, ɵdirectiveInject, ɵinjectAttribute, ɵgetFactoryOf, ɵgetInheritedFactory, ɵtemplateRefExtractor, ɵProvidersFeature, ɵInheritDefinitionFeature, ɵNgOnChangesFeature, ɵLifecycleHooksFeature, ɵRender3NgModuleRef, ɵmarkDirty, ɵNgModuleFactory, ɵNO_CHANGE, ɵcontainer, ɵnextContext, ɵelementStart, ɵnamespaceHTML, ɵnamespaceMathML, ɵnamespaceSVG, ɵelement, ɵlistener, ɵtext, ɵembeddedViewStart, ɵquery, ɵregisterContentQuery, ɵprojection, ɵbind, ɵinterpolation1, ɵinterpolation2, ɵinterpolation3, ɵinterpolation4, ɵinterpolation5, ɵinterpolation6, ɵinterpolation7, ɵinterpolation8, ɵinterpolationV, ɵpipeBind1, ɵpipeBind2, ɵpipeBind3, ɵpipeBind4, ɵpipeBindV, ɵpureFunction0, ɵpureFunction1, ɵpureFunction2, ɵpureFunction3, ɵpureFunction4, ɵpureFunction5, ɵpureFunction6, ɵpureFunction7, ɵpureFunction8, ɵpureFunctionV, ɵgetCurrentView, ɵgetHostElement, ɵrestoreView, ɵcontainerRefreshStart, ɵcontainerRefreshEnd, ɵqueryRefresh, ɵloadQueryList, ɵelementEnd, ɵelementProperty, ɵcomponentHostSyntheticProperty, ɵprojectionDef, ɵreference, ɵenableBindings, ɵdisableBindings, ɵallocHostVars, ɵelementAttribute, ɵelementContainerStart, ɵelementContainerEnd, ɵelementStyling, ɵelementHostAttrs, ɵelementStylingMap, ɵelementStyleProp, ɵelementStylingApply, ɵelementClassProp, ɵtextBinding, ɵtemplate, ɵembeddedViewEnd, ɵstore, ɵload, ɵpipe, ɵwhenRendered, ɵi18n, ɵi18nAttributes, ɵi18nExp, ɵi18nStart, ɵi18nEnd, ɵi18nApply, ɵi18nPostprocess, ɵsetClassMetadata, ɵcompileComponent, ɵcompileDirective, ɵcompileNgModule, ɵcompileNgModuleDefs, ɵpatchComponentDefWithScope, ɵresetCompiledComponents, ɵcompilePipe, ɵsanitizeHtml, ɵsanitizeStyle, ɵdefaultStyleSanitizer, ɵsanitizeScript, ɵsanitizeUrl, ɵsanitizeResourceUrl, ɵbypassSanitizationTrustHtml, ɵbypassSanitizationTrustStyle, ɵbypassSanitizationTrustScript, ɵbypassSanitizationTrustUrl, ɵbypassSanitizationTrustResourceUrl, ɵgetLContext, ɵbindPlayerFactory, ɵaddPlayer, ɵgetPlayers, ɵcompileNgModuleFactory__POST_R3__, ɵSWITCH_COMPILE_COMPONENT__POST_R3__, ɵSWITCH_COMPILE_DIRECTIVE__POST_R3__, ɵSWITCH_COMPILE_PIPE__POST_R3__, ɵSWITCH_COMPILE_NGMODULE__POST_R3__, ɵgetDebugNode__POST_R3__, ɵSWITCH_COMPILE_INJECTABLE__POST_R3__, ɵSWITCH_IVY_ENABLED__POST_R3__, ɵSWITCH_CHANGE_DETECTOR_REF_FACTORY__POST_R3__, ɵCompiler_compileModuleSync__POST_R3__, ɵCompiler_compileModuleAsync__POST_R3__, ɵCompiler_compileModuleAndAllComponentsSync__POST_R3__, ɵCompiler_compileModuleAndAllComponentsAsync__POST_R3__, ɵSWITCH_ELEMENT_REF_FACTORY__POST_R3__, ɵSWITCH_TEMPLATE_REF_FACTORY__POST_R3__, ɵSWITCH_VIEW_CONTAINER_REF_FACTORY__POST_R3__, ɵSWITCH_RENDERER2_FACTORY__POST_R3__, ɵgetModuleFactory__POST_R3__, ɵpublishGlobalUtil, ɵpublishDefaultGlobalUtils, ɵSWITCH_INJECTOR_FACTORY__POST_R3__, ɵregisterModuleFactory, ɵEMPTY_ARRAY, ɵEMPTY_MAP, ɵand, ɵccf, ɵcmf, ɵcrt, ɵdid, ɵeld, ɵelementEventFullName, ɵgetComponentViewDefinitionFactory, ɵinlineInterpolate, ɵinterpolate, ɵmod, ɵmpd, ɵncd, ɵnov, ɵpid, ɵprd, ɵpad, ɵpod, ɵppd, ɵqud, ɵted, ɵunv, ɵvid */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_s", function() { return APPLICATION_MODULE_PROVIDERS; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_p", function() { return _iterableDiffersFactory; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_q", function() { return _keyValueDiffersFactory; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_r", function() { return _localeFactory; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_g", function() { return _appIdRandomProviderFactory; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_n", function() { return DefaultIterableDifferFactory; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_o", function() { return DefaultKeyValueDifferFactory; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_m", function() { return DebugElement__PRE_R3__; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_l", function() { return DebugNode__PRE_R3__; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_c", function() { return injectInjectorOnly; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_d", function() { return ReflectiveInjector_; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_e", function() { return ReflectiveDependency; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_f", function() { return resolveReflectiveProviders; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_k", function() { return getModuleFactory__PRE_R3__; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_t", function() { return wtfEnabled; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_v", function() { return createScope; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_u", function() { return detectWTF; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_y", function() { return endTimeRange; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_w", function() { return leave; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_x", function() { return startTimeRange; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bb", function() { return injectAttributeImpl; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bi", function() { return NG_INJECTABLE_DEF; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bc", function() { return getLView; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bd", function() { return getPreviousOrParentTNode; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_be", function() { return nextContextImpl; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bh", function() { return BoundPlayerFactory; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bl", function() { return loadInternal; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_h", function() { return createElementRef; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_i", function() { return createTemplateRef; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_j", function() { return createViewRef; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_t", function() { return APPLICATION_MODULE_PROVIDERS; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_q", function() { return _iterableDiffersFactory; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_r", function() { return _keyValueDiffersFactory; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_s", function() { return _localeFactory; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_h", function() { return _appIdRandomProviderFactory; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_o", function() { return DefaultIterableDifferFactory; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_p", function() { return DefaultKeyValueDifferFactory; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_n", function() { return DebugElement__PRE_R3__; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_m", function() { return DebugNode__PRE_R3__; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_c", function() { return NullInjector; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_d", function() { return injectInjectorOnly; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_e", function() { return ReflectiveInjector_; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_f", function() { return ReflectiveDependency; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_g", function() { return resolveReflectiveProviders; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_l", function() { return getModuleFactory__PRE_R3__; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_u", function() { return wtfEnabled; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_w", function() { return createScope; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_v", function() { return detectWTF; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_z", function() { return endTimeRange; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_x", function() { return leave; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_y", function() { return startTimeRange; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bc", function() { return injectAttributeImpl; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bj", function() { return NG_INJECTABLE_DEF; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bd", function() { return getLView; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_be", function() { return getPreviousOrParentTNode; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bf", function() { return nextContextImpl; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bi", function() { return BoundPlayerFactory; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bm", function() { return loadInternal; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_i", function() { return createElementRef; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_j", function() { return createTemplateRef; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_k", function() { return createViewRef; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_a", function() { return makeParamDecorator; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_b", function() { return makePropDecorator; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bj", function() { return getClosureSafeProperty; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_z", function() { return _def; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_ba", function() { return DebugContext; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bk", function() { return getClosureSafeProperty; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_ba", function() { return _def; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ɵangular_packages_core_core_bb", function() { return DebugContext; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createPlatform", function() { return createPlatform; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "assertPlatform", function() { return assertPlatform; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "destroyPlatform", function() { return destroyPlatform; });
@@ -33832,7 +33841,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var rxjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! rxjs */ "./node_modules/rxjs/_esm5/index.js");
 /* harmony import */ var rxjs_operators__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! rxjs/operators */ "./node_modules/rxjs/_esm5/operators/index.js");
 /**
- * @license Angular v7.2.5
+ * @license Angular v7.2.9
  * (c) 2010-2019 Google LLC. https://angular.io/
  * License: MIT
  */
@@ -34495,18 +34504,18 @@ function resolveForwardRef(type) {
  *   selector: 'my-comp',
  *   templateUrl: 'my-comp.html', // This requires asynchronous resolution
  * })
- * class MyComponnent{
+ * class MyComponent{
  * }
  *
- * // Calling `renderComponent` will fail because `MyComponent`'s `@Compenent.templateUrl`
- * // needs to be resolved because `renderComponent` is synchronous process.
- * // renderComponent(MyComponent);
+ * // Calling `renderComponent` will fail because `renderComponent` is a synchronous process
+ * // and `MyComponent`'s `@Component.templateUrl` needs to be resolved asynchronously.
  *
- * // Calling `resolveComponentResources` will resolve `@Compenent.templateUrl` into
- * // `@Compenent.template`, which would allow `renderComponent` to proceed in synchronous manner.
- * // Use browser's `fetch` function as the default resource resolution strategy.
+ * // Calling `resolveComponentResources()` will resolve `@Component.templateUrl` into
+ * // `@Component.template`, which allows `renderComponent` to proceed in a synchronous manner.
+ *
+ * // Use browser's `fetch()` function as the default resource resolution strategy.
  * resolveComponentResources(fetch).then(() => {
- *   // After resolution all URLs have been converted into strings.
+ *   // After resolution all URLs have been converted into `template` strings.
  *   renderComponent(MyComponent);
  * });
  *
@@ -34515,8 +34524,8 @@ function resolveForwardRef(type) {
  * NOTE: In AOT the resolution happens during compilation, and so there should be no need
  * to call this method outside JIT mode.
  *
- * @param resourceResolver a function which is responsible to returning a `Promise` of the resolved
- * URL. Browser's `fetch` method is a good default implementation.
+ * @param resourceResolver a function which is responsible for returning a `Promise` to the
+ * contents of the resolved URL. Browser's `fetch()` method is a good default implementation.
  */
 function resolveComponentResources(resourceResolver) {
     // Store all promises which are fetching the resources.
@@ -35483,7 +35492,7 @@ var R3ResolvedDependencyType;
  * found in the LICENSE file at https://angular.io/license
  */
 function getCompilerFacade() {
-    var globalNg = _global.ng;
+    var globalNg = _global['ng'];
     if (!globalNg || !globalNg.ɵcompilerFacade) {
         throw new Error("Angular JIT compilation failed: '@angular/compiler' not loaded!\n" +
             "  - JIT compilation is discouraged for production use-cases! Consider AOT mode instead.\n" +
@@ -38939,7 +38948,7 @@ function updateStylingMap(context, classesInput, stylesInput, directiveRef) {
     var classesValue = classesPlayerBuilder ?
         classesInput.value :
         classesInput;
-    var stylesValue = stylesPlayerBuilder ? stylesInput.value : stylesInput;
+    var stylesValue = stylesPlayerBuilder ? stylesInput['value'] : stylesInput;
     // early exit (this is what's done to avoid using ctx.bind() to cache the value)
     var ignoreAllClassUpdates = limitToSingleClasses(context) || classesValue === NO_CHANGE ||
         classesValue === context[6 /* CachedClassValueOrInitialClassString */];
@@ -44576,7 +44585,7 @@ var Version = /** @class */ (function () {
 /**
  * @publicApi
  */
-var VERSION = new Version('7.2.5');
+var VERSION = new Version('7.2.9');
 
 /**
  * @license
@@ -45134,6 +45143,12 @@ var HTML_ATTRS = tagSet('abbr,accesskey,align,alt,autoplay,axis,bgcolor,border,c
 // can be sanitized, but they increase security surface area without a legitimate use case, so they
 // are left out here.
 var VALID_ATTRS = merge$1(URI_ATTRS, SRCSET_ATTRS, HTML_ATTRS);
+// Elements whose content should not be traversed/preserved, if the elements themselves are invalid.
+//
+// Typically, `<invalid>Some content</invalid>` would traverse (and in this case preserve)
+// `Some content`, but strip `invalid-element` opening/closing tags. For some elements, though, we
+// don't want to preserve the content, if the elements themselves are going to be removed.
+var SKIP_TRAVERSING_CONTENT_IF_INVALID_ELEMENTS = tagSet('script,style,template');
 /**
  * SanitizingHtmlSerializer serializes a DOM fragment, stripping out any unsafe elements and unsafe
  * attributes.
@@ -45150,10 +45165,10 @@ var SanitizingHtmlSerializer = /** @class */ (function () {
         // However this code never accesses properties off of `document` before deleting its contents
         // again, so it shouldn't be vulnerable to DOM clobbering.
         var current = el.firstChild;
-        var elementValid = true;
+        var traverseContent = true;
         while (current) {
             if (current.nodeType === Node.ELEMENT_NODE) {
-                elementValid = this.startElement(current);
+                traverseContent = this.startElement(current);
             }
             else if (current.nodeType === Node.TEXT_NODE) {
                 this.chars(current.nodeValue);
@@ -45162,7 +45177,7 @@ var SanitizingHtmlSerializer = /** @class */ (function () {
                 // Strip non-element, non-text nodes.
                 this.sanitizedSomething = true;
             }
-            if (elementValid && current.firstChild) {
+            if (traverseContent && current.firstChild) {
                 current = current.firstChild;
                 continue;
             }
@@ -45182,18 +45197,18 @@ var SanitizingHtmlSerializer = /** @class */ (function () {
         return this.buf.join('');
     };
     /**
-     * Outputs only valid Elements.
+     * Sanitizes an opening element tag (if valid) and returns whether the element's contents should
+     * be traversed. Element content must always be traversed (even if the element itself is not
+     * valid/safe), unless the element is one of `SKIP_TRAVERSING_CONTENT_IF_INVALID_ELEMENTS`.
      *
-     * Invalid elements are skipped.
-     *
-     * @param element element to sanitize
-     * Returns true if the element is valid.
+     * @param element The element to sanitize.
+     * @return True if the element's contents should be traversed.
      */
     SanitizingHtmlSerializer.prototype.startElement = function (element) {
         var tagName = element.nodeName.toLowerCase();
         if (!VALID_ELEMENTS.hasOwnProperty(tagName)) {
             this.sanitizedSomething = true;
-            return false;
+            return !SKIP_TRAVERSING_CONTENT_IF_INVALID_ELEMENTS.hasOwnProperty(tagName);
         }
         this.buf.push('<');
         this.buf.push(tagName);
@@ -45926,6 +45941,9 @@ function readUpdateOpCodes(updateOpCodes, icus, bindingsStartIndex, changeMask, 
                     }
                     else {
                         var nodeIndex = opCode >>> 2 /* SHIFT_REF */;
+                        var tIcuIndex = void 0;
+                        var tIcu = void 0;
+                        var icuTNode = void 0;
                         switch (opCode & 3 /* MASK_OPCODE */) {
                             case 1 /* Attr */:
                                 var attrName = updateOpCodes[++j];
@@ -45936,9 +45954,9 @@ function readUpdateOpCodes(updateOpCodes, icus, bindingsStartIndex, changeMask, 
                                 textBinding(nodeIndex, value);
                                 break;
                             case 2 /* IcuSwitch */:
-                                var tIcuIndex = updateOpCodes[++j];
-                                var tIcu = icus[tIcuIndex];
-                                var icuTNode = getTNode(nodeIndex, viewData);
+                                tIcuIndex = updateOpCodes[++j];
+                                tIcu = icus[tIcuIndex];
+                                icuTNode = getTNode(nodeIndex, viewData);
                                 // If there is an active case, delete the old nodes
                                 if (icuTNode.activeCaseIndex !== null) {
                                     var removeCodes = tIcu.remove[icuTNode.activeCaseIndex];
@@ -49216,7 +49234,7 @@ var initializeBaseDef = function (target) {
     }
 };
 /**
- * Does the work of creating the `ngBaseDef` property for the @Input and @Output decorators.
+ * Does the work of creating the `ngBaseDef` property for the `Input` and `Output` decorators.
  * @param key "inputs" or "outputs"
  */
 var updateBaseDefFromIOProp = function (getProp) {
@@ -58336,7 +58354,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _angular_common__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @angular/common */ "./node_modules/@angular/common/fesm5/common.js");
 /* harmony import */ var _angular_platform_browser__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @angular/platform-browser */ "./node_modules/@angular/platform-browser/fesm5/platform-browser.js");
 /**
- * @license Angular v7.2.5
+ * @license Angular v7.2.9
  * (c) 2010-2019 Google LLC. https://angular.io/
  * License: MIT
  */
@@ -58773,7 +58791,7 @@ var CachedResourceLoader = /** @class */ (function (_super) {
 /**
  * @publicApi
  */
-var VERSION = new _angular_core__WEBPACK_IMPORTED_MODULE_1__["Version"]('7.2.5');
+var VERSION = new _angular_core__WEBPACK_IMPORTED_MODULE_1__["Version"]('7.2.9');
 
 /**
  * @license
@@ -58883,7 +58901,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _angular_common__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @angular/common */ "./node_modules/@angular/common/fesm5/common.js");
 /* harmony import */ var _angular_core__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @angular/core */ "./node_modules/@angular/core/fesm5/core.js");
 /**
- * @license Angular v7.2.5
+ * @license Angular v7.2.9
  * (c) 2010-2019 Google LLC. https://angular.io/
  * License: MIT
  */
@@ -60850,7 +60868,7 @@ var BROWSER_MODULE_PROVIDERS = [
 ];
 /**
  * Exports required infrastructure for all Angular apps.
- * Included by defaults in all Angular apps created with the CLI
+ * Included by default in all Angular apps created with the CLI
  * `new` command.
  * Re-exports `CommonModule` and `ApplicationModule`, making their
  * exports and providers available to all apps.
@@ -61356,7 +61374,7 @@ var By = /** @class */ (function () {
 /**
  * @publicApi
  */
-var VERSION = new _angular_core__WEBPACK_IMPORTED_MODULE_2__["Version"]('7.2.5');
+var VERSION = new _angular_core__WEBPACK_IMPORTED_MODULE_2__["Version"]('7.2.9');
 
 /**
  * @license
@@ -61473,7 +61491,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var rxjs_operators__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! rxjs/operators */ "./node_modules/rxjs/_esm5/operators/index.js");
 /* harmony import */ var _angular_platform_browser__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @angular/platform-browser */ "./node_modules/@angular/platform-browser/fesm5/platform-browser.js");
 /**
- * @license Angular v7.2.5
+ * @license Angular v7.2.9
  * (c) 2010-2019 Google LLC. https://angular.io/
  * License: MIT
  */
@@ -65154,9 +65172,10 @@ function defaultRouterHook(snapshot, runExtras) {
 /**
  * @description
  *
- * Provides the navigation and url manipulation capabilities.
+ * An NgModule that provides navigation and URL manipulation capabilities.
  *
- * See `Routes` for more details and examples.
+ * @see `Route`.
+ * @see [Routing and Navigation Guide](guide/router).
  *
  * @ngModule RouterModule
  *
@@ -65178,11 +65197,12 @@ var Router = /** @class */ (function () {
         this.currentNavigation = null;
         this.navigationId = 0;
         this.isNgZoneEnabled = false;
+        /**
+         * An event stream for routing events in this NgModule.
+         */
         this.events = new rxjs__WEBPACK_IMPORTED_MODULE_3__["Subject"]();
         /**
-         * Error handler that is invoked when a navigation errors.
-         *
-         * See `ErrorHandler` for more information.
+         * A handler for navigation errors in this NgModule.
          */
         this.errorHandler = defaultErrorHandler;
         /**
@@ -65192,13 +65212,16 @@ var Router = /** @class */ (function () {
          */
         this.malformedUriErrorHandler = defaultMalformedUriErrorHandler;
         /**
-         * Indicates if at least one navigation happened.
+         * True if at least one navigation event has occurred,
+         * false otherwise.
          */
         this.navigated = false;
         this.lastSuccessfulId = -1;
         /**
-         * Used by RouterModule. This allows us to
-         * pause the navigation either before preactivation or after it.
+         * Hooks that enable you to pause navigation,
+         * either before or after the preactivation phase.
+         * Used by `RouterModule`.
+         *
          * @internal
          */
         this.hooks = {
@@ -65209,21 +65232,24 @@ var Router = /** @class */ (function () {
          * Extracts and merges URLs. Used for AngularJS to Angular migrations.
          */
         this.urlHandlingStrategy = new DefaultUrlHandlingStrategy();
+        /**
+         * The strategy for re-using routes.
+         */
         this.routeReuseStrategy = new DefaultRouteReuseStrategy();
         /**
-         * Define what the router should do if it receives a navigation request to the current URL.
-         * By default, the router will ignore this navigation. However, this prevents features such
-         * as a "refresh" button. Use this option to configure the behavior when navigating to the
-         * current URL. Default is 'ignore'.
+         * How to handle a navigation request to the current URL. One of:
+         * - `'ignore'` :  The router ignores the request.
+         * - `'reload'` : The router reloads the URL. Use to implement a "refresh" feature.
          */
         this.onSameUrlNavigation = 'ignore';
         /**
-         * Defines how the router merges params, data and resolved data from parent to child
-         * routes. Available options are:
+         * How to merge parameters, data, and resolved data from parent to child
+         * routes. One of:
          *
-         * - `'emptyOnly'`, the default, only inherits parent params for path-less or component-less
-         *   routes.
-         * - `'always'`, enables unconditional inheritance of parent params.
+         * - `'emptyOnly'` : Inherit parent parameters, data, and resolved data
+         * for path-less or component-less routes.
+         * - `'always'` : Inherit parent parameters, data, and resolved data
+         * for all child routes.
          */
         this.paramsInheritanceStrategy = 'emptyOnly';
         /**
@@ -65545,7 +65571,7 @@ var Router = /** @class */ (function () {
         }
     };
     Object.defineProperty(Router.prototype, "url", {
-        /** The current url */
+        /** The current URL. */
         get: function () { return this.serializeUrl(this.currentUrlTree); },
         enumerable: true,
         configurable: true
@@ -65557,9 +65583,9 @@ var Router = /** @class */ (function () {
     /**
      * Resets the configuration used for navigation and generating links.
      *
-     * @usageNotes
+     * @param config The route array for the new configuration.
      *
-     * ### Example
+     * @usageNotes
      *
      * ```
      * router.resetConfig([
@@ -65578,7 +65604,7 @@ var Router = /** @class */ (function () {
     };
     /** @docsNotRequired */
     Router.prototype.ngOnDestroy = function () { this.dispose(); };
-    /** Disposes of the router */
+    /** Disposes of the router. */
     Router.prototype.dispose = function () {
         if (this.locationSubscription) {
             this.locationSubscription.unsubscribe();
@@ -65586,14 +65612,16 @@ var Router = /** @class */ (function () {
         }
     };
     /**
-     * Applies an array of commands to the current url tree and creates a new url tree.
+     * Applies an array of commands to the current URL tree and creates a new URL tree.
      *
      * When given an activate route, applies the given commands starting from the route.
      * When not given a route, applies the given command starting from the root.
      *
-     * @usageNotes
+     * @param commands An array of commands to apply.
+     * @param navigationExtras
+     * @returns The new URL tree.
      *
-     * ### Example
+     * @usageNotes
      *
      * ```
      * // create /team/33/user/11
@@ -65658,12 +65686,15 @@ var Router = /** @class */ (function () {
         return createUrlTree(a, this.currentUrlTree, commands, q, f);
     };
     /**
-     * Navigate based on the provided url. This navigation is always absolute.
+     * Navigate based on the provided URL, which must be absolute.
      *
-     * Returns a promise that:
-     * - resolves to 'true' when navigation succeeds,
-     * - resolves to 'false' when navigation fails,
-     * - is rejected when an error happens.
+     * @param url An absolute URL. The function does not apply any delta to the current URL.
+     * @param extras An object containing properties that modify the navigation strategy.
+     * The function ignores any properties in the `NavigationExtras` that would change the
+     * provided URL.
+     *
+     * @returns A Promise that resolves to 'true' when navigation succeeds,
+     * to 'false' when navigation fails, or is rejected on error.
      *
      * @usageNotes
      *
@@ -65676,10 +65707,6 @@ var Router = /** @class */ (function () {
      * router.navigateByUrl("/team/33/user/11", { skipLocationChange: true });
      * ```
      *
-     * Since `navigateByUrl()` takes an absolute URL as the first parameter,
-     * it will not apply any delta to the current URL and ignores any properties
-     * in the second parameter (the `NavigationExtras`) that would change the
-     * provided URL.
      */
     Router.prototype.navigateByUrl = function (url, extras) {
         if (extras === void 0) { extras = { skipLocationChange: false }; }
@@ -67191,7 +67218,7 @@ function provideRouterInitializer() {
 /**
  * @publicApi
  */
-var VERSION = new _angular_core__WEBPACK_IMPORTED_MODULE_2__["Version"]('7.2.5');
+var VERSION = new _angular_core__WEBPACK_IMPORTED_MODULE_2__["Version"]('7.2.9');
 
 /**
  * @license
